@@ -1,6 +1,6 @@
 import os
 import sys
-#sys.path.append("/home/matthias/git_repos/EnergyBasedPrioritization")
+import pickle
 import click
 import numpy as np
 import json
@@ -93,7 +93,7 @@ def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles
 def launch(
     env_name, n_epochs, num_cpu, seed, replay_strategy, policy_save_interval, clip_return,
     temperature, prioritization, binding, logging, version, dump_buffer, n_cycles, rank_method,
-    w_potential, w_linear, w_rotational, clip_energy, save_path, override_params={}, save_policies=True):
+    w_potential, w_linear, w_rotational, clip_energy, save_path, load_path, override_params={}, save_policies=True):
 
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
@@ -169,6 +169,12 @@ def launch(
     dims = config.configure_dims(params)
     policy = config.configure_ddpg(dims=dims, params=params, clip_return=clip_return)
 
+    if load_path:
+        # Load policy.
+        with open(load_path, 'rb') as f:
+            policy = pickle.load(f)
+            print("Policy loaded from {}".format(load_path))
+
     rollout_params = {
         'exploit': False,
         'use_target_net': False,
@@ -207,9 +213,9 @@ def launch(
 
 @click.command()
 @click.option('--env_name', type=click.Choice(['FetchPickAndPlace-v1', 'HandManipulateBlockFull-v1', \
-        'HandManipulateEggFull-v1', 'HandManipulatePenRotate-v1']), default='FetchPickAndPlace-v1', help='the name of the OpenAI Gym \
+        'HandManipulateEggFull-v1', 'HandManipulatePenRotate-v1', 'FetchPickAndThrow-v1']), default='FetchPickAndPlace-v1', help='the name of the OpenAI Gym \
         environment that you want to train on. We tested EBP on four challenging robotic manipulation tasks, including: \
-        FetchPickAndPlace-v1, HandManipulateBlockFull-v1, HandManipulateEggFull-v1, HandManipulatePenRotate-v1')
+        FetchPickAndPlace-v1, HandManipulateBlockFull-v1, HandManipulateEggFull-v1, HandManipulatePenRotate-v1, FetchPickAndThrow-v1')
 @click.option('--n_epochs', type=int, default=50, help='the number of training epochs to run')
 @click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')
 @click.option('--seed', type=int, default=0, help='the random seed used to seed both the environment and the training code')
@@ -230,6 +236,7 @@ def launch(
 @click.option('--w_rotational', type=float, default=1.0, help='w_rotational')
 @click.option('--clip_energy', type=float, default=999, help='clip_energy')
 @click.option('--save_path', type=str, default=None, help='save_path')
+@click.option('--load_path', type=str, default=None, help='save_path')
 
 def main(**kwargs):
     launch(**kwargs)
