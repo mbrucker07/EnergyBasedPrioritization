@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.append("/home/matthias/git_repos/EnergyBasedPrioritization")
+#sys.path.append("/home/matthias/git_repos/EnergyBasedPrioritization")
 import click
 import numpy as np
 import json
