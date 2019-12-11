@@ -93,7 +93,7 @@ def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles
 def launch(
     env_name, n_epochs, num_cpu, seed, replay_strategy, policy_save_interval, clip_return,
     temperature, prioritization, binding, logging, version, dump_buffer, n_cycles, rank_method,
-    w_potential, w_linear, w_rotational, clip_energy, override_params={}, save_policies=True):
+    w_potential, w_linear, w_rotational, clip_energy, save_path, override_params={}, save_policies=True):
 
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
@@ -117,6 +117,11 @@ def launch(
     else:
         logdir = osp.join(tempfile.gettempdir(),
             datetime.datetime.now().strftime("openai-%Y-%m-%d-%H-%M-%S-%f"))
+
+    if save_path:
+        logdir = save_path
+
+
 
     if rank == 0:
         if logdir or logger.get_dir() is None:
@@ -224,6 +229,7 @@ def launch(
 @click.option('--w_linear', type=float, default=1.0, help='w_linear')
 @click.option('--w_rotational', type=float, default=1.0, help='w_rotational')
 @click.option('--clip_energy', type=float, default=999, help='clip_energy')
+@click.option('--save_path', type=str, default=None, help='save_path')
 
 def main(**kwargs):
     launch(**kwargs)
