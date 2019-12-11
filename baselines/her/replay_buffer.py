@@ -205,7 +205,7 @@ class ReplayBufferEnergy:
             buffers[key] = episode_batch[key]
 
         if self.prioritization == 'energy':
-            if self.env_name in ['FetchPickAndPlace-v0', 'FetchSlide-v0', 'FetchPush-v0']:
+            if self.env_name in ['FetchPickAndPlace-v1', 'FetchSlide-v1', 'FetchPush-v1']:
                 height = buffers['ag'][:, :, 2]
                 height_0 = np.repeat(height[:,0].reshape(-1,1), height[:,1::].shape[1], axis=1)
                 height = height[:,1::] - height_0
@@ -222,10 +222,10 @@ class ReplayBufferEnergy:
                 energy_transition = np.clip(energy_transition, 0, clip_energy)
                 energy_transition_total = np.sum(energy_transition, axis=1)
                 episode_batch['e'] = energy_transition_total.reshape(-1,1)
-            elif self.env_name in ['HandManipulatePenRotate-v0', \
-                                   'HandManipulateEggFull-v0', \
-                                   'HandManipulateBlockFull-v0', \
-                                   'HandManipulateBlockRotateXYZ-v0']:
+            elif self.env_name in ['HandManipulatePenRotate-v1', \
+                                   'HandManipulateEggFull-v1', \
+                                   'HandManipulateBlockFull-v1', \
+                                   'HandManipulateBlockRotateXYZ-v1']:
                 g, m, delta_t, inertia  = 9.81, 1, 0.04, 1
                 quaternion = buffers['ag'][:,:,3:].copy()
                 angle = np.apply_along_axis(quaternion_to_euler_angle, 2, quaternion)
@@ -345,7 +345,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             for key in episode_batch.keys():
                 buffers[key] = episode_batch[key]
 
-            if self.env_name in ['FetchPickAndPlace-v0', 'FetchSlide-v0', 'FetchPush-v0']:
+            if self.env_name in ['FetchPickAndPlace-v1', 'FetchSlide-v1', 'FetchPush-v1']:
                 height = buffers['ag'][:, :, 2]
                 height_0 = np.repeat(height[:,0].reshape(-1,1), height[:,1::].shape[1], axis=1)
                 height = height[:,1::] - height_0
@@ -360,10 +360,10 @@ class PrioritizedReplayBuffer(ReplayBuffer):
                 energy_transition = energy_totoal.copy()
                 energy_transition[:,1::] = energy_diff.copy()
                 episode_batch['e'] = energy_transition
-            elif self.env_name in ['HandManipulatePenRotate-v0', \
-                                   'HandManipulateEggFull-v0', \
-                                   'HandManipulateBlockFull-v0', \
-                                   'HandManipulateBlockRotateXYZ-v0']:
+            elif self.env_name in ['HandManipulatePenRotate-v1', \
+                                   'HandManipulateEggFull-v1', \
+                                   'HandManipulateBlockFull-v1', \
+                                   'HandManipulateBlockRotateXYZ-v1']:
                 g, m, delta_t, inertia  = 9.81, 1, 0.04, 1
                 quaternion = buffers['ag'][:,:,3:].copy()
                 angle = np.apply_along_axis(quaternion_to_euler_angle, 2, quaternion)
