@@ -212,10 +212,10 @@ def launch(
 
 
 @click.command()
-@click.option('--env_name', type=click.Choice(['FetchPickAndPlace-v1', 'HandManipulateBlockFull-v1', \
-        'HandManipulateEggFull-v1', 'HandManipulatePenRotate-v1', 'FetchPickAndThrow-v1']), default='FetchPickAndPlace-v1', help='the name of the OpenAI Gym \
+@click.option('--env_name', type=click.Choice(['FetchPickAndPlace-v1', 'FetchSlide-v1', 'HandManipulateBlockFull-v1', \
+        'HandManipulateEggFull-v1', 'HandManipulatePenRotate-v1', 'FetchPickAndThrow-v1']), default='FetchPickAndPlace-v1' help='the name of the OpenAI Gym \
         environment that you want to train on. We tested EBP on four challenging robotic manipulation tasks, including: \
-        FetchPickAndPlace-v1, HandManipulateBlockFull-v1, HandManipulateEggFull-v1, HandManipulatePenRotate-v1, FetchPickAndThrow-v1')
+        FetchPickAndPlace-v1, HandManipulateBlockFull-v1, HandManipulateEggFull-v1, HandManipulatePenRotate-v1, FetchPickAndThrow-v1, FetchSlide-v1')
 @click.option('--n_epochs', type=int, default=50, help='the number of training epochs to run')
 @click.option('--num_cpu', type=int, default=1, help='the number of CPU cores to use (using MPI)')
 @click.option('--seed', type=int, default=0, help='the random seed used to seed both the environment and the training code')

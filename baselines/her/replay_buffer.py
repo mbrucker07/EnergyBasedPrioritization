@@ -205,7 +205,7 @@ class ReplayBufferEnergy:
             buffers[key] = episode_batch[key]
 
         if self.prioritization == 'energy':
-            if self.env_name in ['FetchPickAndPlace-v1', 'FetchSlide-v1', 'FetchPush-v1', 'FetchPickAndThrow-v1']:
+            if 'Fetch' in self.env_name:
                 height = buffers['ag'][:, :, 2]
                 height_0 = np.repeat(height[:,0].reshape(-1,1), height[:,1::].shape[1], axis=1)
                 height = height[:,1::] - height_0
@@ -345,7 +345,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             for key in episode_batch.keys():
                 buffers[key] = episode_batch[key]
 
-            if self.env_name in ['FetchPickAndPlace-v1', 'FetchSlide-v1', 'FetchPush-v1', 'FetchPickAndThrow-v1']:
+            if 'Fetch' in self.env_name:
                 height = buffers['ag'][:, :, 2]
                 height_0 = np.repeat(height[:,0].reshape(-1,1), height[:,1::].shape[1], axis=1)
                 height = height[:,1::] - height_0
