@@ -186,3 +186,10 @@ class RolloutWorker:
         """
         for idx, env in enumerate(self.envs):
             env.seed(seed + 1000 * idx)
+
+    # TODO: use adapt_env!
+    def adapt_env(self, adapt_dict):
+        for env in self.envs:
+            for key, value in adapt_dict.items():
+                env.env.adapt_dict[key] = value
+
