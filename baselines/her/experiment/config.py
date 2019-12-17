@@ -16,7 +16,7 @@ DEFAULT_ENV_PARAMS = {
         'n_cycles': 10,
     },
     'FetchCurling-v1': {
-        'eval_modes': ['uniform']
+        'eval_modes': ['uniform', "z1", "z6"]
     }
 }
 

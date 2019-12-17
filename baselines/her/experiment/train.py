@@ -77,7 +77,7 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                     eval.generate_rollouts()
                 # record logs
                 for key, val in eval.logs('test'):
-                    logger.record_tabular(name + "_" + key, mpi_average(val))
+                    logger.record_tabular(key + "_" + name, mpi_average(val))
                 i += 1
         # TODO END NEW
 
