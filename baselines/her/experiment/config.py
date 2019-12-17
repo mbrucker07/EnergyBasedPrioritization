@@ -15,6 +15,9 @@ DEFAULT_ENV_PARAMS = {
     'FetchReach-v0': {
         'n_cycles': 10,
     },
+    'FetchCurling-v1': {
+        'eval_modes': ['uniform']
+    }
 }
 
 

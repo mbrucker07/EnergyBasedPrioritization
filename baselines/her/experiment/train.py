@@ -26,7 +26,7 @@ def mpi_average(value):
     return mpi_moments(np.array(value))[0]
 
 
-def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles, n_batches, 
+def train(policy, rollout_worker, evaluators, n_epochs, n_test_rollouts, n_cycles, n_batches,
           policy_save_interval, save_policies, num_cpu, dump_buffer, w_potential, w_linear,
           w_rotational, rank_method, clip_energy, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
@@ -51,6 +51,11 @@ def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles
             policy.update_target_net()
 
         # test
+
+
+
+        evaluator = evaluators[0] # TODO: new
+
         evaluator.clear_history()
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
@@ -64,9 +69,24 @@ def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
 
+
+        # TODO NEW SECTION
+        if len(evaluators) > 1:
+            i = 1
+            for eval in evaluators[1:]:
+                eval.clear_history()
+                for _ in range(n_test_rollouts):
+                    evaluator.generate_rollouts()
+                # record logs
+                for key, val in evaluator.logs('test'):
+                    logger.record_tabular(str(i) + key, mpi_average(val))
+                for key, val in rollout_worker.logs('train'):
+                    logger.record_tabular(str(i) + key, mpi_average(val))
+                i += 1
+        # TODO END NEW
+
         if rank == 0:
             logger.dump_tabular()
-
             if dump_buffer:
                 policy.dump_buffer(epoch)
 
@@ -93,7 +113,7 @@ def train(policy, rollout_worker, evaluator, n_epochs, n_test_rollouts, n_cycles
 def launch(
     env_name, n_epochs, num_cpu, seed, replay_strategy, policy_save_interval, clip_return,
     temperature, prioritization, binding, logging, version, dump_buffer, n_cycles, rank_method,
-    w_potential, w_linear, w_rotational, clip_energy, save_path, load_path, eval_mode, train_mode, override_params={}, save_policies=True):
+    w_potential, w_linear, w_rotational, clip_energy, save_path, load_path, override_params={}, save_policies=True):
 
     # Fork for multi-CPU MPI implementation.
     if num_cpu > 1:
@@ -154,6 +174,7 @@ def launch(
     params['clip_energy'] = clip_energy
     params['n_epochs'] = n_epochs
     params['num_cpu'] = num_cpu
+    params['eval_modes'] = None
 
     if params['dump_buffer']:
         params['alpha'] =0
@@ -196,24 +217,26 @@ def launch(
         eval_params[name] = params[name]
 
     rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
-    if train_mode:
-        train_dict = dict()
-        train_dict["mode"] = train_mode
-        rollout_worker.adapt_env(train_dict)
-        print("Train mode: {}".format(train_mode))
     rollout_worker.seed(rank_seed)
 
+    evaluators = list()
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
-    if eval_mode:
-        eval_dict = dict()
-        eval_dict["mode"] = eval_mode
-        evaluator.adapt_env(eval_dict)
-        print("Eval mode: {}".format(eval_mode))
     evaluator.seed(rank_seed)
+    evaluators.append(evaluator)
+    if params["eval_modes"]:
+        for eval_mode in params["eval_modes"]:
+            evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+            eval_dict = dict()
+            eval_dict["mode"] = eval_mode
+            evaluator.adapt_env(eval_dict)
+            print("Eval mode: {}".format(eval_mode))
+            evaluator.seed(rank_seed)
+            evaluators.append(evaluator)
+
 
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
-        evaluator=evaluator, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
+        evaluator=evaluators, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies,
         num_cpu=num_cpu, dump_buffer=dump_buffer, w_potential=params['w_potential'], 
@@ -246,8 +269,6 @@ def launch(
 @click.option('--clip_energy', type=float, default=999, help='clip_energy')
 @click.option('--save_path', type=str, default=None, help='save_path')
 @click.option('--load_path', type=str, default=None, help='load_path')
-@click.option('--eval_mode', type=str, default=None, help='eval_mode')
-@click.option('--train_mode', type=str, default=None, help='train_mode')
 
 
 def main(**kwargs):
