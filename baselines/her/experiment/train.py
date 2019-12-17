@@ -26,7 +26,7 @@ def mpi_average(value):
     return mpi_moments(np.array(value))[0]
 
 
-def train(policy, rollout_worker, evaluators, n_epochs, n_test_rollouts, n_cycles, n_batches,
+def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test_rollouts, n_cycles, n_batches,
           policy_save_interval, save_policies, num_cpu, dump_buffer, w_potential, w_linear,
           w_rotational, rank_method, clip_energy, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
@@ -52,8 +52,6 @@ def train(policy, rollout_worker, evaluators, n_epochs, n_test_rollouts, n_cycle
 
         # test
 
-
-
         evaluator = evaluators[0] # TODO: new
 
         evaluator.clear_history()
@@ -73,15 +71,14 @@ def train(policy, rollout_worker, evaluators, n_epochs, n_test_rollouts, n_cycle
         # TODO NEW SECTION
         if len(evaluators) > 1:
             i = 1
-            for eval in evaluators[1:]:
+            for eval, name in zip(evaluators[1:], evaluators_names[1:]):
                 eval.clear_history()
                 for _ in range(n_test_rollouts):
-                    evaluator.generate_rollouts()
+                    eval.generate_rollouts()
                 # record logs
-                for key, val in evaluator.logs('test'):
-                    logger.record_tabular(str(i) + key, mpi_average(val))
-                for key, val in rollout_worker.logs('train'):
-                    logger.record_tabular(str(i) + key, mpi_average(val))
+                for key, val in eval.logs('test'):
+                    logger.record_tabular(name + "_" + key, mpi_average(val))
+
                 i += 1
         # TODO END NEW
 
@@ -220,9 +217,11 @@ def launch(
     rollout_worker.seed(rank_seed)
 
     evaluators = list()
+    evaluators_names = list()
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
     evaluator.seed(rank_seed)
     evaluators.append(evaluator)
+    evaluators_names.append("default")
     if params["eval_modes"]:
         for eval_mode in params["eval_modes"]:
             evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
@@ -232,11 +231,12 @@ def launch(
             print("Eval mode: {}".format(eval_mode))
             evaluator.seed(rank_seed)
             evaluators.append(evaluator)
+            evaluators_names.append(eval_mode)
 
 
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
-        evaluators=evaluators, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
+        evaluators=evaluators, evaluators_names=evaluators_names, =n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies,
         num_cpu=num_cpu, dump_buffer=dump_buffer, w_potential=params['w_potential'], 
