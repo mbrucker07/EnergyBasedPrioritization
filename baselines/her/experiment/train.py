@@ -78,7 +78,6 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 # record logs
                 for key, val in eval.logs('test'):
                     logger.record_tabular(name + "_" + key, mpi_average(val))
-
                 i += 1
         # TODO END NEW
 
@@ -236,7 +235,7 @@ def launch(
 
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
-        evaluators=evaluators, evaluators_names=evaluators_names, =n_epochs, n_test_rollouts=params['n_test_rollouts'],
+        evaluators=evaluators, evaluators_names=evaluators_names, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies,
         num_cpu=num_cpu, dump_buffer=dump_buffer, w_potential=params['w_potential'], 
