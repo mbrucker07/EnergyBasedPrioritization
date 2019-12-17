@@ -236,7 +236,7 @@ def launch(
 
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
-        evaluator=evaluators, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
+        evaluators=evaluators, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies,
         num_cpu=num_cpu, dump_buffer=dump_buffer, w_potential=params['w_potential'], 
