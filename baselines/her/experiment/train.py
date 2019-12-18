@@ -170,7 +170,8 @@ def launch(
     params['clip_energy'] = clip_energy
     params['n_epochs'] = n_epochs
     params['num_cpu'] = num_cpu
-    params['eval_modes'] = None
+    params['eval_probs'] = None
+    params['train_probs'] = None
 
     if params['dump_buffer']:
         params['alpha'] =0
@@ -218,16 +219,22 @@ def launch(
     evaluators = list()
     evaluators_names = list()
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+    if params["train_probs"]:
+        train_dict = dict()
+        train_dict["probs"] = params["train_probs"]
+        rollout_worker.adapt_env(train_dict)
+        evaluator.adapt_env(train_dict)
+        print("Train mode probs: {}".format(train_dict["probs"]))
     evaluator.seed(rank_seed)
     evaluators.append(evaluator)
-    evaluators_names.append("default")
-    if params["eval_modes"]:
-        for eval_mode in params["eval_modes"]:
+    evaluators_names.append("train")
+    if params["eval_probs"]:
+        for eval_mode, probs in params["eval_probs"].items():
             evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
             eval_dict = dict()
-            eval_dict["mode"] = eval_mode
+            eval_dict["probs"] = probs
             evaluator.adapt_env(eval_dict)
-            print("Eval mode: {}".format(eval_mode))
+            print("Eval mode: {} with probs {}".format(eval_mode, probs))
             evaluator.seed(rank_seed)
             evaluators.append(evaluator)
             evaluators_names.append(eval_mode)

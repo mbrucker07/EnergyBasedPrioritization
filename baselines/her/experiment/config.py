@@ -17,6 +17,17 @@ DEFAULT_ENV_PARAMS = {
     },
     'FetchCurling-v1': {
         'eval_modes': ["z1", "z2", "z3", "z4", "z5", "z6"]
+    },
+    'FetchPickAndPlaceNew-v1': {
+        'train_probs': [0.5, 0, 0.25, 0, 0.25, 0],
+        'eval_probs': {
+            "0_in": [1, 0, 0, 0, 0, 0],
+            "0_out": [0, 1, 0, 0, 0, 0],
+            "1_in": [0, 0, 1, 0, 0, 0],
+            "1_out": [0, 0, 0, 1, 0, 0],
+            "2_in": [0, 0, 0, 0, 1, 0],
+            "2_out": [0, 0, 0, 0, 0, 1]
+        }
     }
 }
 
