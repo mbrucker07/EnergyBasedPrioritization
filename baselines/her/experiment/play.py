@@ -13,6 +13,7 @@ from baselines.her.rollout import RolloutWorker
 @click.option('--seed', type=int, default=0)
 @click.option('--n_test_rollouts', type=int, default=20)
 @click.option('--render', type=int, default=1)
+
 def main(policy_file, seed, n_test_rollouts, render):
     set_global_seeds(seed)
 
@@ -43,6 +44,11 @@ def main(policy_file, seed, n_test_rollouts, render):
         eval_params[name] = params[name]
     
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+    if params["play_probs"]:
+        play_dict = dict()
+        play_dict["probs"] = params["play_probs"]
+        evaluator.adapt_env(play_dict)
+        print("Play mode probs: {}".format(play_dict["probs"]))
     evaluator.seed(seed)
 
     # Run evaluation.
