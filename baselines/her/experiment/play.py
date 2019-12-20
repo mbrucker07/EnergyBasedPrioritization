@@ -10,11 +10,13 @@ from baselines.her.rollout import RolloutWorker
 
 @click.command()
 @click.argument('policy_file', type=str)
+@click.option('--play_probs', type=str, default=None)
 @click.option('--seed', type=int, default=0)
 @click.option('--n_test_rollouts', type=int, default=20)
 @click.option('--render', type=int, default=1)
 
-def main(policy_file, seed, n_test_rollouts, render):
+
+def main(policy_file, play_probs, seed, n_test_rollouts, render):
     set_global_seeds(seed)
 
     # Load policy.
@@ -44,9 +46,11 @@ def main(policy_file, seed, n_test_rollouts, render):
         eval_params[name] = params[name]
     
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
-    if params["play_probs"]:
+    if params["eval_probs"] and play_probs:
+        available_dict = params["eval_probs"]
+        choice = available_dict[play_probs]
         play_dict = dict()
-        play_dict["probs"] = params["play_probs"]
+        play_dict["probs"] = choice
         evaluator.adapt_env(play_dict)
         print("Play mode probs: {}".format(play_dict["probs"]))
     evaluator.seed(seed)

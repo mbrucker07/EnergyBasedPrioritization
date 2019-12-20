@@ -17,7 +17,7 @@ DEFAULT_ENV_PARAMS = {
     },
     'FetchCurling-v1': {
         'train_probs': [1/2, 1/3, 1/6, 0, 0, 0],
-        'play_probs': [0, 1, 0, 0, 0, 0],
+        'play_probs': [1, 0, 0, 0, 0, 0],
         'eval_probs': {
             "train_steps": [1/2, 1/3, 1/6, 0, 0, 0],
             "z0": [1, 0, 0, 0, 0, 0],
