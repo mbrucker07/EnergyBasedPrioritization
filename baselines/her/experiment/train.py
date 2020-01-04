@@ -157,10 +157,9 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
         # TODO NEW SECTION
         if len(evaluators) > 1:
             i = 1
-            iter_list = list(zip(evaluators[1:], evaluators_names[1:]))
-            print("Rank: {}, Iter_list: {}".format(rank,iter_list))
-            for eval, name in iter_list:
-                id += 100
+            for k in range(1, len(evaluators)):
+                eval = evaluators[k]
+                name = evaluators_names[k]
                 eval.clear_history()
                 for _ in range(n_test_rollouts):
                     eval.generate_rollouts()
