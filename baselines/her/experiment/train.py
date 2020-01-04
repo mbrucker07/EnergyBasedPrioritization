@@ -18,6 +18,11 @@ import tempfile
 import datetime
 
 def send_key_value_pair(num_cpu, key, value):
+    if value == []:
+        value = [0.]
+    if not isinstance(value, list):
+        value = [value]
+
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     assert rank < num_cpu
@@ -25,7 +30,8 @@ def send_key_value_pair(num_cpu, key, value):
         data = [key, value]
         comm.send(data, dest=0, tag=rank)
     if rank == 0:
-        val_list = list(value)
+        val_list = list()
+        val_list.append(value)
         for i in range(1, num_cpu):
             data = comm.recv(source=i, tag=i)
             assert data[0] == key
