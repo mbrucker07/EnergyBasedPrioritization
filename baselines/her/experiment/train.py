@@ -122,12 +122,12 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
         for key, val in evaluator.logs('test'):
             if 'success_rate' in key:
                 print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
-            key, mean = send_key_value_pair(key, val)
+            key, mean = send_key_value_pair(num_cpu, key, val)
             logger.record_tabular(key, mean)
         for key, val in rollout_worker.logs('train'):
             if 'success_rate' in key:
                 print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
-            key, mean = send_key_value_pair(key, val)
+            key, mean = send_key_value_pair(num_cpu, key, val)
             logger.record_tabular(key, mean)
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
@@ -144,7 +144,7 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 for key, val in eval.logs(name):
                     if 'success_rate' in key:
                         print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
-                    key, mean = send_key_value_pair(key, val)
+                    key, mean = send_key_value_pair(num_cpu, key, val)
                     logger.record_tabular(key, mean)
                 i += 1
         # TODO END NEW NEW
