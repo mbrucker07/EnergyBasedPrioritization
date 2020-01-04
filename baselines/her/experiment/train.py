@@ -334,7 +334,8 @@ def launch(
             evaluators.append(evaluator)
             evaluators_names.append(eval_mode)
 
-
+    print("Rank: {}, Names: {}".format(rank, evaluators_names))
+    
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
         evaluators=evaluators, evaluators_names=evaluators_names, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
