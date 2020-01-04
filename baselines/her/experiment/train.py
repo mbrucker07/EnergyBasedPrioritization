@@ -18,6 +18,12 @@ import tempfile
 import datetime
 
 def send_key_value_pair(num_cpu, key, value):
+    if num_cpu is None:
+        raise Exception("Num cpu is none")
+    if key is None:
+        raise Exception("key is none")
+    if value is None:
+        value = [0.]
     if value == []:
         value = [0.]
     if not isinstance(value, list):
@@ -29,13 +35,14 @@ def send_key_value_pair(num_cpu, key, value):
     if rank > 0:
         data = [key, value]
         comm.send(data, dest=0, tag=rank)
-    if rank == 0:
+    elif rank == 0:
         val_list = list()
         val_list.append(value)
-        for i in range(1, num_cpu):
-            data = comm.recv(source=i, tag=i)
-            assert data[0] == key
-            val_list.append(data[1])
+        if num_cpu > 1:
+            for i in range(1, num_cpu):
+                data = comm.recv(source=i, tag=i)
+                assert data[0] == key
+                val_list.append(data[1])
         x = np.array(val_list)
         mean = np.mean(x)
         return key, mean
