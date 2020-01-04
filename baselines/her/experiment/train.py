@@ -17,6 +17,23 @@ import os.path as osp
 import tempfile
 import datetime
 
+def send_key_value_pair(num_cpu, key, value):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    assert rank < num_cpu
+    if rank > 0:
+        data = [key, value]
+        comm.send(data, dest=0, tag=rank)
+    if rank == 0:
+        val_list = list(value)
+        for i in range(1, num_cpu):
+            data = comm.recv(source=i, tag=i)
+            assert data[0] == key
+            val_list.append(data[1])
+        x = np.array(val_list)
+        mean = np.mean(x)
+        return key, mean
+
 
 def mpi_average(value):
     if value == []:
@@ -50,7 +67,7 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
 
             policy.update_target_net()
 
-
+        """
         # test
 
         evaluator = evaluators[0] # TODO: new
@@ -88,6 +105,51 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 i += 1
 
         # TODO END NEW
+
+        """
+        # TODO NEW NEW
+
+        # test
+
+        evaluator = evaluators[0] # TODO: new
+
+        evaluator.clear_history()
+        for _ in range(n_test_rollouts):
+            evaluator.generate_rollouts()
+
+        # record logs
+        logger.record_tabular('epoch', epoch)
+        for key, val in evaluator.logs('test'):
+            if 'success_rate' in key:
+                print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
+            key, mean = send_key_value_pair(key, val)
+            logger.record_tabular(key, mean)
+        for key, val in rollout_worker.logs('train'):
+            if 'success_rate' in key:
+                print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
+            key, mean = send_key_value_pair(key, val)
+            logger.record_tabular(key, mean)
+        for key, val in policy.logs():
+            logger.record_tabular(key, mpi_average(val))
+
+
+        # TODO NEW SECTION
+        if len(evaluators) > 1:
+            i = 1
+            for eval, name in zip(evaluators[1:], evaluators_names[1:]):
+                eval.clear_history()
+                for _ in range(n_test_rollouts):
+                    eval.generate_rollouts()
+                # record logs
+                for key, val in eval.logs(name):
+                    if 'success_rate' in key:
+                        print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
+                    key, mean = send_key_value_pair(key, val)
+                    logger.record_tabular(key, mean)
+                i += 1
+        # TODO END NEW NEW
+
+
 
         if rank == 0:
             logger.dump_tabular()
