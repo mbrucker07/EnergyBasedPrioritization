@@ -35,6 +35,7 @@ def send_key_value_pair(num_cpu, key, value):
     if rank > 0:
         data = [key, value]
         comm.send(data, dest=0, tag=rank)
+        return None, None
     elif rank == 0:
         val_list = list()
         val_list.append(value)
@@ -136,12 +137,14 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
             if 'success_rate' in key:
                 print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
             key, mean = send_key_value_pair(num_cpu, key, val)
-            logger.record_tabular(key, mean)
+            if rank == 0:
+                logger.record_tabular(key, mean)
         for key, val in rollout_worker.logs('train'):
             if 'success_rate' in key:
                 print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
             key, mean = send_key_value_pair(num_cpu, key, val)
-            logger.record_tabular(key, mean)
+            if rank == 0:
+                logger.record_tabular(key, mean)
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
 
@@ -158,7 +161,8 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                     if 'success_rate' in key:
                         print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
                     key, mean = send_key_value_pair(num_cpu, key, val)
-                    logger.record_tabular(key, mean)
+                    if rank == 0:
+                        logger.record_tabular(key, mean)
                 i += 1
         # TODO END NEW NEW
 
