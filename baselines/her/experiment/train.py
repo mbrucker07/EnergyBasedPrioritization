@@ -35,6 +35,7 @@ def send_key_value_pair(num_cpu, id, key, value):
     if rank > 0:
         data = [key, value]
         comm.send(data, dest=0, tag=rank+id)
+        print("Send: {}, id: {}, rank: {}".format(key, id, rank))
         return None, None
     elif rank == 0:
         val_list = list()
@@ -42,7 +43,7 @@ def send_key_value_pair(num_cpu, id, key, value):
         if num_cpu > 1:
             for i in range(1, num_cpu):
                 data = comm.recv(source=i, tag=i+id)
-                print("Recv: {}, Self: {}".format(data[0], key))
+                print("Recv: {}, Self: {}, Id: {}, i: {}".format(data[0], key, id, i))
                 assert data[0] == key
                 val_list.append(data[1])
         x = np.array(val_list)
