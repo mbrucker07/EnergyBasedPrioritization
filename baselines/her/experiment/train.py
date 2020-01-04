@@ -50,6 +50,7 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
 
             policy.update_target_net()
 
+
         # test
 
         evaluator = evaluators[0] # TODO: new
@@ -57,6 +58,9 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
         evaluator.clear_history()
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
+
+        print("Rollout success_history: {}".format(list(rollout_worker.success_history)))  # TODO new
+        print("Test success_history: {}".format(list(evaluator.success_history)))  # TODO new
 
         # record logs
         logger.record_tabular('epoch', epoch)
@@ -76,9 +80,11 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 for _ in range(n_test_rollouts):
                     eval.generate_rollouts()
                 # record logs
-                for key, val in eval.logs('test'):
-                    logger.record_tabular(key + "_" + name, mpi_average(val))
+                print("{} success_history: {}".format(name, list(eval.success_history)))  # TODO new
+                for key, val in eval.logs(name):
+                    logger.record_tabular(key, mpi_average(val))
                 i += 1
+
         # TODO END NEW
 
         if rank == 0:
