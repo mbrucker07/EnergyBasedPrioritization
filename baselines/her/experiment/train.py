@@ -59,14 +59,15 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
 
-        print("Rollout success_history: {}".format(list(rollout_worker.success_history)))  # TODO new
-        print("Test success_history: {}".format(list(evaluator.success_history)))  # TODO new
-
         # record logs
         logger.record_tabular('epoch', epoch)
         for key, val in evaluator.logs('test'):
+            if 'success_rate' in key:
+                print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
             logger.record_tabular(key, mpi_average(val))
         for key, val in rollout_worker.logs('train'):
+            if 'success_rate' in key:
+                print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
             logger.record_tabular(key, mpi_average(val))
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
@@ -80,8 +81,9 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 for _ in range(n_test_rollouts):
                     eval.generate_rollouts()
                 # record logs
-                print("{} success_history: {}".format(name, list(eval.success_history)))  # TODO new
                 for key, val in eval.logs(name):
+                    if 'success_rate' in key:
+                        print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
                     logger.record_tabular(key, mpi_average(val))
                 i += 1
 
