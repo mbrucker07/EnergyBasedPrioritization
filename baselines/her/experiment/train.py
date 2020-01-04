@@ -5,7 +5,7 @@ import click
 import numpy as np
 import json
 from mpi4py import MPI
-
+from collections import OrderedDict
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines.common.mpi_moments import mpi_moments
@@ -324,7 +324,7 @@ def launch(
     evaluators.append(evaluator)
     evaluators_names.append("train")
     if params["eval_probs"]:
-        for eval_mode, probs in params["eval_probs"].items():
+        for eval_mode, probs in sorted(params["eval_probs"].items()):
             evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
             eval_dict = dict()
             eval_dict["probs"] = probs
@@ -335,7 +335,7 @@ def launch(
             evaluators_names.append(eval_mode)
 
     print("Rank: {}, Names: {}".format(rank, evaluators_names))
-    
+
     train(
         logdir=logdir, policy=policy, rollout_worker=rollout_worker,
         evaluators=evaluators, evaluators_names=evaluators_names, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
