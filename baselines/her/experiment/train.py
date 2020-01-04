@@ -17,7 +17,7 @@ import os.path as osp
 import tempfile
 import datetime
 
-def send_key_value_pair(num_cpu, key, value):
+def send_key_value_pair(num_cpu, id, key, value):
     if num_cpu is None:
         raise Exception("Num cpu is none")
     if key is None:
@@ -34,14 +34,14 @@ def send_key_value_pair(num_cpu, key, value):
     assert rank < num_cpu
     if rank > 0:
         data = [key, value]
-        comm.send(data, dest=0, tag=rank)
+        comm.send(data, dest=0, tag=rank+id)
         return None, None
     elif rank == 0:
         val_list = list()
         val_list.append(value)
         if num_cpu > 1:
             for i in range(1, num_cpu):
-                data = comm.recv(source=i, tag=i)
+                data = comm.recv(source=i, tag=i+id)
                 assert data[0] == key
                 val_list.append(data[1])
         x = np.array(val_list)
@@ -133,16 +133,19 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
 
         # record logs
         logger.record_tabular('epoch', epoch)
+        id = 10
         for key, val in evaluator.logs('test'):
             if 'success_rate' in key:
                 print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
-            key, mean = send_key_value_pair(num_cpu, key, val)
+            key, mean = send_key_value_pair(num_cpu, id, key, val)
+            id += 10;
             if rank == 0:
                 logger.record_tabular(key, mean)
         for key, val in rollout_worker.logs('train'):
             if 'success_rate' in key:
                 print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
-            key, mean = send_key_value_pair(num_cpu, key, val)
+            key, mean = send_key_value_pair(num_cpu, id, key, val)
+            id += 10
             if rank == 0:
                 logger.record_tabular(key, mean)
         for key, val in policy.logs():
@@ -160,7 +163,8 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
                 for key, val in eval.logs(name):
                     if 'success_rate' in key:
                         print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
-                    key, mean = send_key_value_pair(num_cpu, key, val)
+                    key, mean = send_key_value_pair(num_cpu, id, key, val)
+                    id += 10
                     if rank == 0:
                         logger.record_tabular(key, mean)
                 i += 1
