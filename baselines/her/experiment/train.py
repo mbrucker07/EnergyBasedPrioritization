@@ -190,13 +190,14 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
         # Master (rank 0) advance to new training probs if min_success is reached
         if rank == 0 and best_success_rate > min_successes[train_index] and train_index+1 < len(rollout_workers):
             train_index += 1
-            best_success_rate = -1
-            rollout_worker = rollout_workers[train_index]
             print("Reached min_success {} > {} --> Changing train_probs to {} (unknown success rate)"
                   .format(best_success_rate, min_successes[train_index], evaluators_names[train_index]))
+            best_success_rate = -1
+            rollout_worker = rollout_workers[train_index]
 
         # Send train_index to slaves, let them confirm
-        _ , new_index = master_send_key_value_pair(num_cpu, 1e8, "train_index", train_index)
+        dummy, new_index = master_send_key_value_pair(num_cpu, 1e8, "train_index", train_index)
+        print("Rank {} received {},{}".format(rank, dummy, new_index))
         if new_index == train_index+1:
             train_index = new_index
             best_success_rate = -1
