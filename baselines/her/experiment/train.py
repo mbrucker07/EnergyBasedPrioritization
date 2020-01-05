@@ -40,7 +40,7 @@ def master_send_key_value_pair(num_cpu, id, key, value):
     elif rank == 0:
         if num_cpu > 1:
             for i in range(1, num_cpu):
-                comm.send([key, value], source=i, tag=i+id)
+                comm.send([key, value], dest=i, tag=i+id)
                 #print("Recv: {}, Self: {}, Id: {}, i: {}".format(data[0], key, id, i))
         return None, None
 
