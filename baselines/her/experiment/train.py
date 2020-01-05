@@ -160,7 +160,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
                 if rank == 0:
                     logger.record_tabular(key, mean)
                 # update success rate if eval is the one related to training
-                if 'success_rate' in key and rank == 0 and k == train_index:
+                if rank == 0 and 'success_rate' in key and k == train_index:
                     success_rate = mean
 
         # TODO END NEW NEW
