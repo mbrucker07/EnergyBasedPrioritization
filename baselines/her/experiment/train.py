@@ -148,7 +148,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
             # record logs
             for key, val in eval.logs(name):
                 if 'success_rate' in key:
-                    print("Rank {}: {} success: {} with history {}".format(rank, name, val, list(eval.success_history)))  # TODO new
+                    print("Rank {}: {} success: {}".format(rank, name, val))  # TODO new
                 key, mean = slaves_send_key_value_pair(num_cpu, id, key, val)
                 id += 10
                 if rank == 0:
@@ -162,7 +162,6 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
 
 
         if rank == 0:
-            logger.info('Training in train_mode {}', evaluators_names[train_index])
             logger.record_tabular('train_index', train_index)
             logger.record_tabular('train_mode', evaluators_names[train_index])
             logger.dump_tabular()
@@ -191,7 +190,6 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
 
         # Send train_index to slaves, let them confirm
         dummy, new_index = master_send_key_value_pair(num_cpu, 1e8, "train_index", train_index)
-        print("Rank {} received {},{}".format(rank, dummy, new_index))
         if new_index == train_index+1:
             train_index = new_index
             best_success_rate = -1
@@ -339,7 +337,7 @@ def launch(
             evaluators_names.append(train_mode)
             # Min success
             min_successes.append(min_success)
-            print("Created Train and Eval mode: {} with probs {} and min_success {}".format(train_mode, probs, min_success))
+            logger.info("Created Train and Eval mode: {} with probs {} and min_success {}".format(train_mode, probs, min_success))
     else:
         # Default Rollout workers in case no config file is specified
         rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
@@ -349,28 +347,10 @@ def launch(
         evaluator.seed(rank_seed)
         evaluators.append(evaluator)
         evaluators_names.append("default")
-    """
-    if params["train_probs"]:
-        train_dict = dict()
-        train_dict["probs"] = params["train_probs"]
-        rollout_worker.adapt_env(train_dict)
-        evaluator.adapt_env(train_dict)
-        print("Train mode probs: {}".format(train_dict["probs"]))
-    evaluators.append(evaluator)
-    evaluators_names.append("train")
-    if params["eval_probs"]:
-        for eval_mode, probs in sorted(params["eval_probs"].items()): # sorted is necessary for mpi communication
-            evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
-            eval_dict = dict()
-            eval_dict["probs"] = probs
-            evaluator.adapt_env(eval_dict)
-            print("Eval mode: {} with probs {}".format(eval_mode, probs))
-            evaluator.seed(rank_seed)
-            evaluators.append(evaluator)
-            evaluators_names.append(eval_mode)
+        min_successes.append(1)
 
-    print("Rank: {}, Names: {}".format(rank, evaluators_names))
-    """
+    logger.info("Modes: {}".format(evaluators_names))
+    logger.info("Min_successes: {}".format(min_successes))
 
     train(
         logdir=logdir, policy=policy, rollout_workers=rollout_workers,
