@@ -17,7 +17,34 @@ import os.path as osp
 import tempfile
 import datetime
 
-def send_key_value_pair(num_cpu, id, key, value):
+def master_send_key_value_pair(num_cpu, id, key, value):
+    if num_cpu is None:
+        raise Exception("Num cpu is none")
+    if key is None:
+        raise Exception("key is none")
+    if value is None:
+        value = [0.]
+    if value == []:
+        value = [0.]
+    if not isinstance(value, list):
+        value = [value]
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    assert rank < num_cpu
+    if rank > 0:
+        [key_rec, value_rec] = comm.recv(source=0, tag=rank+id)
+        assert key_rec == key
+        #print("Send: {}, id: {}, rank: {}".format(key, id, rank))
+        return key_rec, value
+    elif rank == 0:
+        if num_cpu > 1:
+            for i in range(1, num_cpu):
+                comm.send([key, value], source=i, tag=i+id)
+                #print("Recv: {}, Self: {}, Id: {}, i: {}".format(data[0], key, id, i))
+        return None, None
+
+def slaves_send_key_value_pair(num_cpu, id, key, value):
     if num_cpu is None:
         raise Exception("Num cpu is none")
     if key is None:
@@ -35,7 +62,7 @@ def send_key_value_pair(num_cpu, id, key, value):
     if rank > 0:
         data = [key, value]
         comm.send(data, dest=0, tag=rank+id)
-        print("Send: {}, id: {}, rank: {}".format(key, id, rank))
+        #print("Send: {}, id: {}, rank: {}".format(key, id, rank))
         return None, None
     elif rank == 0:
         val_list = list()
@@ -43,7 +70,7 @@ def send_key_value_pair(num_cpu, id, key, value):
         if num_cpu > 1:
             for i in range(1, num_cpu):
                 data = comm.recv(source=i, tag=i+id)
-                print("Recv: {}, Self: {}, Id: {}, i: {}".format(data[0], key, id, i))
+                #print("Recv: {}, Self: {}, Id: {}, i: {}".format(data[0], key, id, i))
                 assert data[0] == key
                 val_list.append(data[1])
         x = np.array(val_list)
@@ -59,7 +86,7 @@ def mpi_average(value):
     return mpi_moments(np.array(value))[0]
 
 
-def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test_rollouts, n_cycles, n_batches,
+def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, n_epochs, n_test_rollouts, n_cycles, n_batches,
           policy_save_interval, save_policies, num_cpu, dump_buffer, w_potential, w_linear,
           w_rotational, rank_method, clip_energy, **kwargs):
     rank = MPI.COMM_WORLD.Get_rank()
@@ -70,7 +97,13 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
 
     logger.info("Training...")
     best_success_rate = -1
+    success_rate = -1
     t = 1
+
+    # initialize rollout_worker and evaluator
+    train_index = 0
+    rollout_worker = rollout_workers[train_index]
+
     for epoch in range(n_epochs):
         # train
         rollout_worker.clear_history()
@@ -83,59 +116,14 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
 
             policy.update_target_net()
 
-        """
-        # test
-
-        evaluator = evaluators[0] # TODO: new
-
-        evaluator.clear_history()
-        for _ in range(n_test_rollouts):
-            evaluator.generate_rollouts()
-
-        # record logs
-        logger.record_tabular('epoch', epoch)
-        for key, val in evaluator.logs('test'):
-            if 'success_rate' in key:
-                print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
-            logger.record_tabular(key, mpi_average(val))
-        for key, val in rollout_worker.logs('train'):
-            if 'success_rate' in key:
-                print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
-            logger.record_tabular(key, mpi_average(val))
-        for key, val in policy.logs():
-            logger.record_tabular(key, mpi_average(val))
-
-
-        # TODO NEW SECTION
-        if len(evaluators) > 1:
-            i = 1
-            for eval, name in zip(evaluators[1:], evaluators_names[1:]):
-                eval.clear_history()
-                for _ in range(n_test_rollouts):
-                    eval.generate_rollouts()
-                # record logs
-                for key, val in eval.logs(name):
-                    if 'success_rate' in key:
-                        print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
-                    logger.record_tabular(key, mpi_average(val))
-                i += 1
-
-        # TODO END NEW
-
-        """
         # TODO NEW NEW
 
         # test
-
-        evaluator = evaluators[0] # TODO: new
-
-        evaluator.clear_history()
-        for _ in range(n_test_rollouts):
-            evaluator.generate_rollouts()
-
+        # unique ids are necessary for mpi communication
         # record logs
         logger.record_tabular('epoch', epoch)
         id = 10
+        """
         for key, val in evaluator.logs('test'):
             if 'success_rate' in key:
                 print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
@@ -150,48 +138,71 @@ def train(policy, rollout_worker, evaluators, evaluators_names, n_epochs, n_test
             id += 10
             if rank == 0:
                 logger.record_tabular(key, mean)
+        """
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
 
 
         # TODO NEW SECTION
-        if len(evaluators) > 1:
-            i = 1
-            for k in range(1, len(evaluators)):
-                eval = evaluators[k]
-                name = evaluators_names[k]
-                eval.clear_history()
-                for _ in range(n_test_rollouts):
-                    eval.generate_rollouts()
-                # record logs
-                for key, val in eval.logs(name):
-                    if 'success_rate' in key:
-                        print("{} success: {} with history {}".format(name, val, list(eval.success_history)))  # TODO new
-                    key, mean = send_key_value_pair(num_cpu, id, key, val)
-                    id += 10
-                    if rank == 0:
-                        logger.record_tabular(key, mean)
-                i += 1
+
+        for k in range(0, train_index+1): # only evaluate probs that have been trained
+            eval = evaluators[k]
+            name = evaluators_names[k]
+            eval.clear_history()
+            for _ in range(n_test_rollouts):
+                eval.generate_rollouts()
+            # record logs
+            for key, val in eval.logs(name):
+                if 'success_rate' in key:
+                    print("Rank {}: {} success: {} with history {}".format(rank, name, val, list(eval.success_history)))  # TODO new
+                key, mean = slaves_send_key_value_pair(num_cpu, id, key, val)
+                id += 10
+                if rank == 0:
+                    logger.record_tabular(key, mean)
+                # update success rate if eval is the one related to training
+                if 'success_rate' in key and rank == 0 and k == train_index:
+                    success_rate = mean
+
         # TODO END NEW NEW
 
 
 
         if rank == 0:
+            logger.info('Training in train_mode {}', evaluators_names[train_index])
+            logger.record_tabular('train_index', train_index)
+            logger.record_tabular('train_mode', evaluators_names[train_index])
             logger.dump_tabular()
             if dump_buffer:
                 policy.dump_buffer(epoch)
 
         # save the policy if it's better than the previous ones
-        success_rate = mpi_average(evaluator.current_success_rate())
+        #success_rate = mpi_average(evaluator.current_success_rate()) TODO: removed this, replaced by custom calculation
         if rank == 0 and success_rate >= best_success_rate and save_policies:
             best_success_rate = success_rate
             logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
-            evaluator.save_policy(best_policy_path)
-            evaluator.save_policy(latest_policy_path)
+            rollout_worker.save_policy(best_policy_path) # TODO replaced evaluator by rollout_worker (policies are the same)
+            rollout_worker.save_policy(latest_policy_path)
         if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
             policy_path = periodic_policy_path.format(epoch)
             logger.info('Saving periodic policy to {} ...'.format(policy_path))
-            evaluator.save_policy(policy_path)
+            rollout_worker.save_policy(policy_path)
+
+        # Master (rank 0) advance to new training probs if min_success is reached
+        if rank == 0 and best_success_rate > min_successes[train_index] and train_index+1 < len(rollout_workers):
+            train_index += 1
+            best_success_rate = -1
+            rollout_worker = rollout_workers[train_index]
+            print("Reached min_success {} > {} --> Changing train_probs to {} (unknown success rate)"
+                  .format(best_success_rate, min_successes[train_index], evaluators_names[train_index]))
+
+        # Send train_index to slaves, let them confirm
+        _ , new_index = master_send_key_value_pair(num_cpu, 1e8, "train_index", train_index)
+        if new_index == train_index+1:
+            train_index = new_index
+            best_success_rate = -1
+            rollout_worker = rollout_workers[train_index]
+            print("Rank {}: Changing train_probs to {}".format(rank, evaluators_names[train_index]))
+
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -308,23 +319,52 @@ def launch(
         rollout_params[name] = params[name]
         eval_params[name] = params[name]
 
-    rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
-    rollout_worker.seed(rank_seed)
 
     evaluators = list()
     evaluators_names = list()
-    evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+    rollout_workers = list()
+    min_successes = list()
+
+
+    if params["train_probs"]:
+        for train_mode, [probs, min_success] in sorted(params["train_probs"].items()):  # sorted is necessary for mpi communication
+            config_dict = dict()
+            config_dict["probs"] = probs
+            # Rollout workers
+            rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
+            rollout_worker.adapt_env(config_dict)
+            rollout_worker.seed(rank_seed)
+            rollout_workers.append(rollout_worker)
+            # Evaluators
+            evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+            evaluator.adapt_env(config_dict)
+            evaluator.seed(rank_seed)
+            evaluators.append(evaluator)
+            # Name
+            evaluators_names.append(train_mode)
+            # Min success
+            min_successes.append(min_success)
+            print("Created Train and Eval mode: {} with probs {} and min_success {}".format(train_mode, probs, min_success))
+    else:
+        # Default Rollout workers in case no config file is specified
+        rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
+        rollout_worker.seed(rank_seed)
+        rollout_workers.append(rollout_worker)
+        evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+        evaluator.seed(rank_seed)
+        evaluators.append(evaluator)
+        evaluators_names.append("default")
+    """
     if params["train_probs"]:
         train_dict = dict()
         train_dict["probs"] = params["train_probs"]
         rollout_worker.adapt_env(train_dict)
         evaluator.adapt_env(train_dict)
         print("Train mode probs: {}".format(train_dict["probs"]))
-    evaluator.seed(rank_seed)
     evaluators.append(evaluator)
     evaluators_names.append("train")
     if params["eval_probs"]:
-        for eval_mode, probs in sorted(params["eval_probs"].items()):
+        for eval_mode, probs in sorted(params["eval_probs"].items()): # sorted is necessary for mpi communication
             evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
             eval_dict = dict()
             eval_dict["probs"] = probs
@@ -335,10 +375,11 @@ def launch(
             evaluators_names.append(eval_mode)
 
     print("Rank: {}, Names: {}".format(rank, evaluators_names))
+    """
 
     train(
-        logdir=logdir, policy=policy, rollout_worker=rollout_worker,
-        evaluators=evaluators, evaluators_names=evaluators_names, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
+        logdir=logdir, policy=policy, rollout_workers=rollout_workers,
+        evaluators=evaluators, evaluators_names=evaluators_names, min_successes= min_successes, n_epochs=n_epochs, n_test_rollouts=params['n_test_rollouts'],
         n_cycles=params['n_cycles'], n_batches=params['n_batches'],
         policy_save_interval=policy_save_interval, save_policies=save_policies,
         num_cpu=num_cpu, dump_buffer=dump_buffer, w_potential=params['w_potential'], 
