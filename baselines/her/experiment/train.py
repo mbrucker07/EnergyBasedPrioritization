@@ -30,7 +30,7 @@ def master_send_key_value_pair(num_cpu, id, key, value):
         [key_rec, value_rec] = comm.recv(source=0, tag=rank+id)
         assert key_rec == key
         #print("Send: {}, id: {}, rank: {}".format(key, id, rank))
-        return key_rec, value
+        return key_rec, value_rec
     elif rank == 0:
         if num_cpu > 1:
             for i in range(1, num_cpu):
@@ -185,7 +185,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
         if rank == 0 and best_success_rate > min_successes[train_index] and train_index+1 < len(rollout_workers):
             train_index += 1
             print("Reached min_success {} > {} --> Changing train_probs to {} (unknown success rate)"
-                  .format(best_success_rate, min_successes[train_index], evaluators_names[train_index]))
+                  .format(best_success_rate, min_successes[train_index-1], evaluators_names[train_index]))
             best_success_rate = -1
             rollout_worker = rollout_workers[train_index]
 
