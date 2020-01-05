@@ -22,12 +22,6 @@ def master_send_key_value_pair(num_cpu, id, key, value):
         raise Exception("Num cpu is none")
     if key is None:
         raise Exception("key is none")
-    if value is None:
-        value = [0.]
-    if value == []:
-        value = [0.]
-    if not isinstance(value, list):
-        value = [value]
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
