@@ -50,7 +50,7 @@ def main(policy_file, play_probs, seed, n_test_rollouts, render):
         available_dict = params["train_probs"]
         choice = available_dict[play_probs]
         play_dict = dict()
-        play_dict["probs"] = choice
+        play_dict["probs"] = choice[0]
         evaluator.adapt_env(play_dict)
         print("Play mode probs: {}".format(play_dict["probs"]))
     evaluator.seed(seed)
