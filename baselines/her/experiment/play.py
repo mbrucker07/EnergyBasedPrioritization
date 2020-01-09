@@ -46,8 +46,8 @@ def main(policy_file, play_probs, seed, n_test_rollouts, render):
         eval_params[name] = params[name]
     
     evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
-    if params["eval_probs"] and play_probs:
-        available_dict = params["eval_probs"]
+    if params["train_probs"] and play_probs:
+        available_dict = params["train_probs"]
         choice = available_dict[play_probs]
         play_dict = dict()
         play_dict["probs"] = choice
