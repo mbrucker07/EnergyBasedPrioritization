@@ -41,7 +41,7 @@ DEFAULT_ENV_PARAMS = {
     },
     'FetchPushNew-v1': {
         'train_probs': {
-            "uniform": [[1/4, 1/4, 1/4, 1/4], 1],
+            "t3_final": [[0, 0, 0, 1], 1],
         },
         'play_probs': [0, 0, 0, 1],
     }
