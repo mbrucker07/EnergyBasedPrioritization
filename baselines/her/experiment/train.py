@@ -181,7 +181,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
             rollout_worker.save_policy(policy_path)
 
         # Master (rank 0) advance to new training probs if min_success is reached
-        if rank == 0 and best_success_rate > min_successes[train_index] and train_index+1 < len(rollout_workers):
+        if rank == 0 and best_success_rate >= min_successes[train_index] and train_index+1 < len(rollout_workers):
             train_index += 1
             print("Reached min_success {} > {} --> Changing train_probs to {} (unknown success rate)"
                   .format(best_success_rate, min_successes[train_index-1], evaluators_names[train_index]))
