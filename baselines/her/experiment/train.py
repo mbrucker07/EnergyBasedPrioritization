@@ -110,34 +110,15 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
 
             policy.update_target_net()
 
-        # TODO NEW NEW
 
-        # test
+        # test with depending on probs!
         # unique ids are necessary for mpi communication
         # record logs
         logger.record_tabular('epoch', epoch)
         id = 10
-        """
-        for key, val in evaluator.logs('test'):
-            if 'success_rate' in key:
-                print("Test success: {} with history {}".format(val, list(evaluator.success_history)))  # TODO new
-            key, mean = send_key_value_pair(num_cpu, id, key, val)
-            id += 10;
-            if rank == 0:
-                logger.record_tabular(key, mean)
-        for key, val in rollout_worker.logs('train'):
-            if 'success_rate' in key:
-                print("Rollout success: {} with history {}".format(val, list(rollout_worker.success_history)))  # TODO new
-            key, mean = send_key_value_pair(num_cpu, id, key, val)
-            id += 10
-            if rank == 0:
-                logger.record_tabular(key, mean)
-        """
+
         for key, val in policy.logs():
             logger.record_tabular(key, mpi_average(val))
-
-
-        # TODO NEW SECTION
 
         for k in range(0, train_index+1): # only evaluate probs that have been trained
             eval = evaluators[k]
@@ -148,7 +129,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
             # record logs
             for key, val in eval.logs(name):
                 if 'success_rate' in key:
-                    print("Rank {}: {} success: {}".format(rank, name, val))  # TODO new
+                    print("Rank {}: {} success: {}".format(rank, name, val))
                 key, mean = slaves_send_key_value_pair(num_cpu, id, key, val)
                 id += 10
                 if rank == 0:
@@ -156,10 +137,6 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
                 # update success rate if eval is the one related to training
                 if rank == 0 and 'success_rate' in key and k == train_index:
                     success_rate = mean
-
-        # TODO END NEW NEW
-
-
 
         if rank == 0:
             logger.record_tabular('train_index', train_index)
@@ -169,17 +146,18 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
                 policy.dump_buffer(epoch)
 
         # save the policy if it's better than the previous ones
-        #success_rate = mpi_average(evaluator.current_success_rate()) TODO: removed this, replaced by custom calculation
         if rank == 0 and success_rate >= best_success_rate and save_policies:
             best_success_rate = success_rate
             logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
-            rollout_worker.save_policy(best_policy_path) # TODO replaced evaluator by rollout_worker (policies are the same)
+            rollout_worker.save_policy(best_policy_path)
             rollout_worker.save_policy(latest_policy_path)
         if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_policies:
             policy_path = periodic_policy_path.format(epoch)
             logger.info('Saving periodic policy to {} ...'.format(policy_path))
             rollout_worker.save_policy(policy_path)
 
+        # Region-Based HER: If best success rate exceeds the min_success_rate from gym env adapt_dict, change to new train_mode
+        # mpi communication is required for this
         # Master (rank 0) advance to new training probs if min_success is reached
         if rank == 0 and best_success_rate >= min_successes[train_index] and train_index+1 < len(rollout_workers):
             train_index += 1
@@ -195,7 +173,6 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
             best_success_rate = -1
             rollout_worker = rollout_workers[train_index]
             print("Rank {}: Changing train_probs to {}".format(rank, evaluators_names[train_index]))
-
 
         # make sure that different threads have different seeds
         local_uniform = np.random.uniform(size=(1,))
@@ -220,7 +197,6 @@ def launch(
     rank = MPI.COMM_WORLD.Get_rank()
 
     # Configure logging
-
     if logging: 
         logdir = 'logs/'+str(env_name)+'-temperature'+str(temperature)+\
                  '-prioritization'+str(prioritization)+'-replay_strategy'+str(replay_strategy)+\
@@ -235,8 +211,6 @@ def launch(
 
     if save_path:
         logdir = save_path
-
-
 
     if rank == 0:
         if logdir or logger.get_dir() is None:
@@ -280,6 +254,8 @@ def launch(
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
         json.dump(params, f)
+
+    # ATTENTION: Region-Based HER parameters params["train_probs"] are taken from config.py! Change probs and train_modes there!
     params = config.prepare_params(params)
     config.log_params(params, logger=logger)
 
@@ -318,6 +294,8 @@ def launch(
     rollout_workers = list()
     min_successes = list()
 
+    # This for is Region-Based HER only:
+    # create a rollout worker and an evaluator for each train_mode specified in config train_probs param!!
 
     if params["train_probs"]:
         for train_mode, [probs, min_success] in sorted(params["train_probs"].items()):  # sorted is necessary for mpi communication
@@ -325,11 +303,13 @@ def launch(
             config_dict["probs"] = probs
             # Rollout workers
             rollout_worker = RolloutWorker(params['make_env'], policy, dims, logger, **rollout_params)
+            # Region-Based HER: modify probability and goal sampling parameters of gym env via adapt_dict!
             rollout_worker.adapt_env(config_dict)
             rollout_worker.seed(rank_seed)
             rollout_workers.append(rollout_worker)
             # Evaluators
             evaluator = RolloutWorker(params['make_env'], policy, dims, logger, **eval_params)
+            # Region-Based HER: modify probability and goal sampling parameters of gym env via adapt_dict!
             evaluator.adapt_env(config_dict)
             evaluator.seed(rank_seed)
             evaluators.append(evaluator)

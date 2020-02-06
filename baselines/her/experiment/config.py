@@ -10,6 +10,9 @@ from baselines.her.her import make_sample_her_transitions, \
                               make_sample_her_transitions_energy, \
                               make_sample_her_transitions_prioritized_replay
 
+# Region-Based HER:
+# Edit train_modes here:
+# each train mode has a name (e.g. "t0"), sampling probabilities for each region (e.g. [1, 0, 0, 0, 0, 0]) and a min_success_rate (e.g. 0.6)
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v0': {
@@ -17,20 +20,22 @@ DEFAULT_ENV_PARAMS = {
     },
     'FetchCurling-v1': {
         'train_probs': {
-            # has to be in order of training
-            "t0": [[1, 0, 0, 0, 0, 0], 0],
-            "t1": [[0, 1, 0, 0, 0, 0], 0],
-            "t2": [[0, 0, 1, 0, 0, 0], 0],
-            "t3": [[0, 0, 0, 1, 0, 0], 0],
-            #"t4": [[0, 0, 0, 0, 1, 0], 1],
-            #"t5": [[0, 0, 0, 0, 0, 1], 0.1]
-            "uniform": [[1/4, 1/4, 1/4, 1/4, 0, 0], 1]
+            # in training order
+            #"final_t3": [[0, 0, 0, 1, 0, 0], 1],
+
+            "t0": [[1, 0, 0, 0, 0, 0], 0.6],
+            "t1": [[0, 1, 0, 0, 0, 0], 0.5],
+            "t2": [[0, 0, 1, 0, 0, 0], 0.4],
+            "t3": [[0, 0, 0, 1, 0, 0], 0.3],
+            "t4": [[0, 0, 0, 0, 1, 0], 0.2],
+            "t5": [[0, 0, 0, 0, 0, 1], 0.1],
+
         },
         'play_probs': [0, 0, 0, 1, 0, 0],
     },
     'FetchPickAndPlaceNew-v1': {
         'train_probs': {
-            "original": [[0.5, 0, 0.25, 0, 0.25, 0], 0.6],
+            #"original": [[0.5, 0, 0.25, 0, 0.25, 0], 0.6],
             "0_in": [[1, 0, 0, 0, 0, 0], 0.1],
             "0_out": [[0, 1, 0, 0, 0, 0], 0.1],
             "1_in": [[0, 0, 1, 0, 0, 0], 0.1],
@@ -42,11 +47,15 @@ DEFAULT_ENV_PARAMS = {
     },
     'FetchPushNew-v1': {
         'train_probs': {
-            #"t0": [[1, 0, 0, 0], 0],
-            #"t1": [[0, 1, 0, 0], 0],
-            #"t2": [[0, 0, 1, 0], 0],
-            "t3": [[0, 0, 0, 1], 0],
-            "uniform": [[1/4, 1/4, 1/4, 1/4], 1],
+
+            # in training order
+            "t0": [[1, 0, 0, 0], 0.6],
+            "t1": [[0, 1, 0, 0], 0.6],
+            "t2": [[0, 0, 1, 0], 0.6],
+            "t3": [[0, 0, 0, 1], 0.6],
+
+            #"final_t3": [[0, 0, 0, 1], 1],
+
         },
         'play_probs': [0, 0, 0, 1],
     }
