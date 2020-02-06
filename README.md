@@ -1,3 +1,10 @@
+# Region-Based HER
+
+Region-Based HER is only implemented on branch new! 
+For theoretical infomation about the concept, please read RegionBasedHER_Theory.pdf !
+For code explanation and results, please read RegionBasedHER_Code_Results.pdf and go through the code!
+
+
 # Energy-Based Hindsight Experience Prioritization
 
 Here is the code for our paper "Energy-Based Hindsight Experience Prioritization".  
