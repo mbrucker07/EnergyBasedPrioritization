@@ -140,7 +140,7 @@ def train(policy, rollout_workers, evaluators, evaluators_names, min_successes, 
 
         if rank == 0:
             logger.record_tabular('train_index', train_index)
-            logger.record_tabular('train_mode', evaluators_names[train_index])
+            #logger.record_tabular('train_mode', evaluators_names[train_index])
             logger.dump_tabular()
             if dump_buffer:
                 policy.dump_buffer(epoch)
